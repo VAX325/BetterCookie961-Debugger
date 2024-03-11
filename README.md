@@ -1,2 +1,3 @@
 # BetterCookie961-Debugger
-Debugger for BetterCookie961 language
+
+Отладчик для языка BetterCookie961. Сделан при помощи ImGui + DX11.
