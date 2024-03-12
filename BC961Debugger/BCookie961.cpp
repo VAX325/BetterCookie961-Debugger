@@ -3,7 +3,8 @@
 #include <vector>
 #include <fstream>
 #include <atomic>
-#include <thread>
+#include <mutex>
+#include <unordered_set>
 #include <stdlib.h>
 #include <cstdlib>
 #include <ctime>
@@ -27,6 +28,9 @@ std::atomic_bool debuggerWait = false;
 std::string_view debuggerCurrentCode = "";
 std::string_view::size_type debuggerCurrentCodePos = 0;
 
+std::mutex mutex;
+std::unordered_set<std::string_view::size_type> debuggerBreakpoints;
+
 std::atomic_bool* runPtr;
 
 std::vector<int> array{ 0 };
@@ -40,6 +44,15 @@ const std::vector<int>& getArray()
 const int getPointerLocation()
 {
     return pointerLocation;
+}
+
+void setBreakpoint(std::string_view::size_type pos, bool enable)
+{
+	std::lock_guard<std::mutex> lock(mutex);
+	if (enable)
+		debuggerBreakpoints.insert(pos);
+	else
+		debuggerBreakpoints.erase(pos);
 }
 
 bool endsWith(std::string const& str, std::string const& suffix) {
@@ -72,6 +85,12 @@ void interpret(std::string code) {
     int i = 0;
     int c = 0;
     while (i < code.length() && *runPtr) {
+		std::lock_guard<std::mutex> lock(mutex);
+		if (debuggerBreakpoints.contains(i))
+		{
+            debuggerWait = true;
+        }
+
         if (debuggerWait)
         {
             debuggerCurrentCode = code;
@@ -89,7 +108,7 @@ void interpret(std::string code) {
             debuggerStep = false;
             debuggerWait = true;
         }
-
+		
         if (code[i] == 'i') {
             if (pointerLocation > 0) {
                 pointerLocation -= 1;
@@ -327,16 +346,16 @@ void interpret(std::string code) {
                 return;
             }
         }
-        else if (code[i] == '/' && (i + 1 < code.length()) && code[i + 1] == '*') {
-            i += 2;
-            while (i < code.length() - 1 && !(code[i] == '*' && code[i + 1] == '/')) {
-                i++;
-            }
-            i--;
-            if (i < code.length() - 1) {
-                i += 2;
-            }
-        }
+		else if (code[i] == '/' && (i + 1 < code.length()) && code[i + 1] == '*')
+		{
+			i += 2;
+			while (i < code.length() - 1 && !(code[i] == '*' && code[i + 1] == '/'))
+			{
+				i++;
+			}
+			i--;
+			if (i < code.length() - 1) { i += 2; }
+		}
         i += 1;
     }
     std::cout << " " << std::endl;

@@ -199,6 +199,7 @@ public:
 		extern std::atomic_bool debuggerStep;
 		extern std::string_view debuggerCurrentCode;
 		extern std::string_view::size_type debuggerCurrentCodePos;
+		static bool needToScrollCode = false;
 
 		ImGui::SetNextWindowPos({context.m_iWidth - 350.f, m_iCellHeight + 40.f});
 		ImGui::SetNextWindowSize({350.f, context.m_iHeight - (m_iCellHeight + 40.f)});
@@ -219,7 +220,10 @@ public:
 				{
 					if (ImGui::Button("Execute one step (F10)") ||
 						ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_F10)))
+					{
+						needToScrollCode = true;
 						debuggerStep = true;
+					}
 				}
 				if (!debuggerWait) ImGui::EndDisabled();
 			}
@@ -244,25 +248,40 @@ public:
 			}
 
 			if (!debuggerWait) ImGui::BeginDisabled(true);
-
-			ImGui::Text("Current position in code: %zi", debuggerCurrentCodePos);
-			if (ImGui::BeginChild("Code", ImVec2(0, 0), ImGuiChildFlags_Border))
 			{
-				if (debuggerCurrentCode.size())
+				// ImGui::Text("Current position in code: %zi", debuggerCurrentCodePos);
+				// if (ImGui::BeginListBox("##Breakpoints"))
+				//{
+				//	// setBreakpoint();
+				//	ImGui::EndListBox();
+				// }
+				// ImGui::IsItemClicked();
+
+				if (ImGui::BeginChild("Code", ImVec2(0, 0), ImGuiChildFlags_Border,
+									  ImGuiWindowFlags_HorizontalScrollbar))
 				{
-					ImGui::TextWrapped("%s",
-									   std::string(debuggerCurrentCode.substr(0, debuggerCurrentCodePos)).c_str());
-					ImGui::SameLine();
-					ImGui::TextColored(ImGui::GetStyle().Colors[ImGuiCol_ButtonActive], "%s",
-									   std::string(debuggerCurrentCode.substr(debuggerCurrentCodePos, 1)).c_str());
-					if (debuggerCurrentCodePos + 1 < debuggerCurrentCode.size())
+					if (debuggerCurrentCode.size())
 					{
-						ImGui::SameLine();
-						ImGui::TextWrapped("%s",
-										   std::string(debuggerCurrentCode.substr(debuggerCurrentCodePos + 1)).c_str());
+						ImGui::Text("%s", std::string(debuggerCurrentCode.substr(0, debuggerCurrentCodePos)).c_str());
+
+						ImGui::TextColored(ImGui::GetStyle().Colors[ImGuiCol_ButtonActive], "%s",
+										   std::string(debuggerCurrentCode.substr(debuggerCurrentCodePos, 1)).c_str());
+
+						if (needToScrollCode)
+						{
+							ImGui::SetScrollHereX();
+							ImGui::SetScrollHereY();
+							needToScrollCode = false;
+						}
+
+						if (debuggerCurrentCodePos + 1 < debuggerCurrentCode.size())
+						{
+							ImGui::Text("%s",
+										std::string(debuggerCurrentCode.substr(debuggerCurrentCodePos + 1)).c_str());
+						}
 					}
+					ImGui::EndChild();
 				}
-				ImGui::EndChild();
 			}
 			if (!debuggerWait) ImGui::EndDisabled();
 
@@ -535,8 +554,6 @@ static inline void InitImGUI(RenderContext_t& context)
 
 static inline void FreeImGUI(RenderContext_t& context)
 {
-	free(context.m_pBC961Font);
-
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
