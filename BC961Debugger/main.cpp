@@ -3,6 +3,8 @@
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx11.h>
 
+#include <portable-file-dialogs/portable-file-dialogs.h>
+
 #include <d3d11.h>
 #include <tchar.h>
 #include <Windows.h>
@@ -90,7 +92,8 @@ private:
 	COutStreamBuf m_COUTStreamBuf;
 	CInStreamBuf m_CINStreamBuf;
 
-	std::atomic<bool> m_bExecute;
+	std::atomic_bool m_bExecute;
+	std::atomic_bool m_bInterpreterWaitsForInput;
 	std::jthread m_InterpreterThread;
 
 public:
@@ -154,7 +157,7 @@ public:
 			ImVec2 size = ImGui::GetWindowSize();
 			size.x -= ImGui::GetStyle().FramePadding.x * 4;
 			size.y -= (ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 8.5f);
-			if (ImGui::BeginChild("STDOUT", size, ImGuiChildFlags_Border))
+			if (ImGui::BeginChild("STDOUT", size, ImGuiChildFlags_Border, ImGuiWindowFlags_HorizontalScrollbar))
 			{
 				ImGui::TextUnformatted(m_COUTStreamBuf.str().c_str());
 				if (m_bNeedScroll)
@@ -207,6 +210,25 @@ public:
 						 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
 		{
 			if (ImGui::Button("Restart BC961 Interpreter\n(On deadlock or relaunch)")) ImGui::OpenPopup("Really?");
+
+			if (ImGui::Button("Execute file"))
+			{
+				auto result = pfd::open_file::open_file("Choose source file", ".", {"BC961 Source files", "*.bc961"});
+				while (!result.ready(1000))
+					;
+
+				RestartInterpreter();
+
+				while (!m_bInterpreterWaitsForInput)
+					;
+				m_bInterpreterWaitsForInput.exchange(false);
+				m_CINStreamBuf.provide_data("1\n");
+
+				while (!m_bInterpreterWaitsForInput)
+					;
+				m_bInterpreterWaitsForInput.exchange(false);
+				m_CINStreamBuf.provide_data(result.result().back() + "\n");
+			}
 
 			// Debugger extensions
 			{
@@ -308,6 +330,8 @@ private:
 		std::cin.rdbuf(&m_CINStreamBuf);
 
 		m_bExecute.exchange(true);
+		m_bInterpreterWaitsForInput.exchange(false);
+
 		m_InterpreterThread = std::jthread(
 			[this]()
 			{
@@ -315,10 +339,14 @@ private:
 				{
 					try
 					{
-						(void)bc961_main(&m_bExecute);
+						(void)bc961_main(&m_bExecute, &m_bInterpreterWaitsForInput);
 					}
-					catch (std::exception&)
+					catch (CExitException&)
 					{
+					}
+					catch (std::exception& e)
+					{
+						std::cout << "Interpreter ended with this exception: " << e.what() << std::endl;
 					}
 
 					std::cout << "Enter anything to restart interpreter" << std::endl;
