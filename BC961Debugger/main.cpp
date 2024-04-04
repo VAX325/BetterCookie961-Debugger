@@ -499,7 +499,8 @@ static inline HWND CreateDebuggerWindow()
 	int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
 	int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-	HWND hwnd = CreateWindowEx(0, CLASS_NAME, _TEXT("BetterCookie961 Debugger"), WS_OVERLAPPEDWINDOW,
+	const std::string sas = "BetterCookie961 Debugger (version "s + DebuggerVersion + ")";
+	HWND hwnd = CreateWindowEx(0, CLASS_NAME, std::wstring(sas.begin(), sas.end()).c_str(), WS_OVERLAPPEDWINDOW,
 							   nScreenWidth / 2 - g_iInitialWidth / 2, nScreenHeight / 2 - g_iInitialHeight / 2,
 							   g_iInitialWidth, g_iInitialHeight, NULL, NULL, GetModuleHandle(0), NULL);
 

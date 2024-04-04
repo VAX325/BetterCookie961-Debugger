@@ -630,6 +630,8 @@ void ExceptionHandler(unsigned int, struct _EXCEPTION_POINTERS* ep)
     throw std::runtime_error(reasonStr);
 }
 
+const std::string label =
+	"Welcome to Better Cookie961 language Compiler v3.5 (Debugger version " + std::string(DebuggerVersion) + ")";
 int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view filename)
 {
     debuggerStep = false;
@@ -644,7 +646,7 @@ int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view filename)
 
 	srand(time(NULL));
 
-	std::cout << "Welcome to Better Cookie961 language Compiler v3.3" << std::endl;
+	std::cout << label << std::endl;
 	std::cout << " " << std::endl;
 		
 	if (endsWith(filename, ".bc961"))
@@ -675,7 +677,7 @@ int bc961_main_shell(std::atomic_bool* run_ptr)
 
 	srand(time(NULL));
 
-	std::cout << "Welcome to Better Cookie961 language Shell v3.3" << std::endl;
+	std::cout << label << std::endl;
 	std::cout << " " << std::endl;
 	int nig = 0;
 	while (nig != 1)
