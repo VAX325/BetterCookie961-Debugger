@@ -12,7 +12,8 @@ public:
 	virtual ~CExitException() = default;
 };
 
-int bc961_main(std::atomic_bool* run_ptr, std::atomic_bool* wait_for_input);
+int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view file);
+int bc961_main_shell(std::atomic_bool* run_ptr);
 
 const std::vector<int>& getArray();
 const int getPointerLocation();

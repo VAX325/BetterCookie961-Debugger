@@ -93,7 +93,7 @@ private:
 	CInStreamBuf m_CINStreamBuf;
 
 	std::atomic_bool m_bExecute;
-	std::atomic_bool m_bInterpreterWaitsForInput;
+	std::atomic_bool m_bIntepreterThreadFileRestart;
 	std::jthread m_InterpreterThread;
 
 public:
@@ -209,25 +209,20 @@ public:
 		if (ImGui::Begin("Tools", nullptr,
 						 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
 		{
-			if (ImGui::Button("Restart BC961 Interpreter\n(On deadlock or relaunch)")) ImGui::OpenPopup("Really?");
+			if (ImGui::Button("Restart BC961 Interpreter\n(On deadlock or relaunch)")) 
+			{
+				// ImGui popup system is very tricky
+				ImGui::OpenPopup("Really?"); 
+			}
 
 			if (ImGui::Button("Execute file"))
 			{
 				auto result = pfd::open_file::open_file("Choose source file", ".", {"BC961 Source files", "*.bc961"});
-				while (!result.ready(1000))
+				while (!result.ready())
 					;
 
-				RestartInterpreter();
-
-				while (!m_bInterpreterWaitsForInput)
-					;
-				m_bInterpreterWaitsForInput.exchange(false);
-				m_CINStreamBuf.provide_data("1\n");
-
-				while (!m_bInterpreterWaitsForInput)
-					;
-				m_bInterpreterWaitsForInput.exchange(false);
-				m_CINStreamBuf.provide_data(result.result().back() + "\n");
+				if (result.result().size())
+					RestartInterpreterAndExecFile(result.result().back());
 			}
 
 			// Debugger extensions
@@ -312,7 +307,7 @@ public:
 	}
 
 private:
-	void RestartInterpreter()
+	void RestartRoutine() 
 	{
 		if (m_InterpreterThread.joinable())
 		{
@@ -330,7 +325,11 @@ private:
 		std::cin.rdbuf(&m_CINStreamBuf);
 
 		m_bExecute.exchange(true);
-		m_bInterpreterWaitsForInput.exchange(false);
+	}
+
+	void RestartInterpreter()
+	{
+		RestartRoutine();
 
 		m_InterpreterThread = std::jthread(
 			[this]()
@@ -339,7 +338,7 @@ private:
 				{
 					try
 					{
-						(void)bc961_main(&m_bExecute, &m_bInterpreterWaitsForInput);
+						(void)bc961_main_shell(&m_bExecute);
 					}
 					catch (CExitException&)
 					{
@@ -359,6 +358,53 @@ private:
 					m_COUTStreamBuf.Open(c, u);
 				}
 			});
+	}
+
+	void RestartInterpreterAndExecFile(const std::string_view filename)
+	{
+		RestartRoutine();
+
+		std::jthread awaiter = std::jthread([this]() 
+		{ 
+			using namespace std::chrono_literals;
+
+			if (m_InterpreterThread.joinable())
+					m_InterpreterThread.join();
+
+			if (m_bIntepreterThreadFileRestart)
+			{
+				RestartInterpreter();
+				m_bIntepreterThreadFileRestart = false;
+			}
+		});
+		awaiter.detach();
+		
+		m_InterpreterThread = std::jthread(
+			[this](const std::string filename)
+			{
+				try
+				{
+					(void)bc961_main_file(&m_bExecute, filename);
+				}
+				catch (CExitException&)
+				{
+				}
+				catch (std::exception& e)
+				{
+					std::cout << "Interpreter ended with this exception: " << e.what() << std::endl;
+				}
+
+				std::cout << "Enter anything to restart interpreter" << std::endl;
+
+				std::string s;
+				while (s.size() == 0 && m_bExecute)
+					std::cin >> s;
+
+				const auto [c, u] = m_COUTStreamBuf.Close();
+				m_COUTStreamBuf.Open(c, u);
+
+				if (s.size()) m_bIntepreterThreadFileRestart = true;
+			}, std::string(filename));
 	}
 
 	int ConsoleCallback(ImGuiInputTextCallbackData* data)
