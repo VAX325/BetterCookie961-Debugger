@@ -12,8 +12,6 @@
 #include <time.h>
 #include <windows.h>
 
-#include "BCookie961.h"
-
 /*
 
 
@@ -24,6 +22,11 @@ UPDATE LOG:
 3.3 - Comments added!
 
 3.4 - Fixed 6-1 cycles and if constructions!
+
+3.5 - Added P and J commands!
+
+3.6 - Added _(break), x/m[+/-0/1], and G
+
 
 */
 
@@ -37,18 +40,12 @@ std::unordered_set<std::string_view::size_type> debuggerBreakpoints;
 
 std::atomic_bool* runPtr;
 
-std::vector<int> array{ 0 };
+std::vector<int> array{0};
 int pointerLocation = 0;
 
-const std::vector<int>& getArray()
-{
-    return array;
-}
+const std::vector<int>& getArray() { return array; }
 
-const int getPointerLocation()
-{
-    return pointerLocation;
-}
+const int getPointerLocation() { return pointerLocation; }
 
 void setBreakpoint(std::string_view::size_type pos, bool enable)
 {
@@ -61,136 +58,122 @@ void setBreakpoint(std::string_view::size_type pos, bool enable)
 
 bool endsWith(const std::string_view str, const std::string_view suffix)
 {
-    if (str.length() < suffix.length()) {
-        return false;
-    }
-    return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
+	if (str.length() < suffix.length()) { return false; }
+	return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
 }
 
-std::string readFile(const std::string_view fileName) {
-    std::ifstream f(fileName.data());
-    if (!f.is_open())
-    {
-        std::cout << "Error! File not found!" << std::endl;
-        throw CExitException();
-    }
-    f.seekg(0, std::ios::end);
-    size_t size = f.tellg();
-    std::string s;
-    s.resize(size);
-    f.seekg(0);
-    f.read(&s[0], size);
-    return s;
+std::string readFile(const std::string_view fileName)
+{
+	std::ifstream f(fileName.data());
+	if (!f.is_open())
+	{
+		std::cout << "Error! File not found!" << std::endl;
+		exit(0);
+	}
+	f.seekg(0, std::ios::end);
+	size_t size = f.tellg();
+	std::string s;
+	s.resize(size);
+	f.seekg(0);
+	f.read(&s[0], size);
+	return s;
 }
 
 void ifFunc(std::string code);
 void arythm(std::string code);
 
-void interpret(std::string code) {
-    int i = 0;
-    int c = 0;
-    while (i < code.length() && *runPtr) {
+void interpret(std::string code)
+{
+	int i = 0;
+	int c = 0;
+	while (i < code.length() && *runPtr)
+	{
 		/*std::lock_guard<std::mutex> lock(mutex);
 		if (debuggerBreakpoints.contains(i))
 		{
-            debuggerWait = true;
-        }*/
+			debuggerWait = true;
+		}*/
 
-        if (debuggerWait)
-        {
-            debuggerCurrentCode = code;
-            debuggerCurrentCodePos = i;
-        }
+		if (debuggerWait)
+		{
+			debuggerCurrentCode = code;
+			debuggerCurrentCodePos = i;
+		}
 
-        while (debuggerWait && *runPtr)
-        {
-            Sleep(25);
-            if (debuggerStep)
-                debuggerWait = false;
-        }
+		while (debuggerWait && *runPtr)
+		{
+			Sleep(25);
+			if (debuggerStep) debuggerWait = false;
+		}
 
-        if (debuggerStep) {
-            debuggerStep = false;
-            debuggerWait = true;
-        }
-		
-        if (code[i] == 'i') {
-            if (pointerLocation > 0) {
-                pointerLocation -= 1;
-            }
-        }
-        else if (code[i] == 'I') {
-            if (pointerLocation > 0) {
-                pointerLocation -= 1;
-                array[pointerLocation] = array[pointerLocation + 1];
-            }
-        }
-        else if (code[i] == 'k') {
-            pointerLocation += 1;
-            if (array.size() <= pointerLocation) {
-                array.push_back(0);
-            }
-        }
-        else if (code[i] == 'K') {
-            pointerLocation += 1;
-            if (array.size() <= pointerLocation) {
-                array.push_back(0);
-            }
-            array[pointerLocation] = array[pointerLocation - 1];
-        }
-        else if (code[i] == 'r') {
-            std::string flnm;
-            std::cout << "File Name: ";
-            std::cin >> flnm;
-            if (endsWith(flnm, ".bc961"))
-            {
-                interpret(readFile(flnm));
-            }
-            else
-            {
-                std::cout << "Error! Unknown extension.";
-                throw CExitException();
-            }
-        }
-        else if (code[i] == 'N') {
-            pointerLocation = 0;
-        }
+		if (debuggerStep)
+		{
+			debuggerStep = false;
+			debuggerWait = true;
+		}
+
+		if (code[i] == 'i')
+		{
+			if (pointerLocation > 0) { pointerLocation -= 1; }
+		}
+		else if (code[i] == 'I')
+		{
+			if (pointerLocation > 0)
+			{
+				pointerLocation -= 1;
+				array[pointerLocation] = array[pointerLocation + 1];
+			}
+		}
+		else if (code[i] == 'k')
+		{
+			pointerLocation += 1;
+			if (array.size() <= pointerLocation) { array.push_back(0); }
+		}
+		else if (code[i] == 'K')
+		{
+			pointerLocation += 1;
+			if (array.size() <= pointerLocation) { array.push_back(0); }
+			array[pointerLocation] = array[pointerLocation - 1];
+		}
+		else if (code[i] == 'r')
+		{
+			std::string flnm;
+			std::cout << "File Name: ";
+			std::cin >> flnm;
+			if (endsWith(flnm, ".bc961")) { interpret(readFile(flnm)); }
+			else
+			{
+				std::cout << "Error! Unknown extension.";
+				exit(0);
+			}
+		}
+		else if (code[i] == 'N') { pointerLocation = 0; }
 		else if (code[i] == 'P')
 		{
 			int tmp = pointerLocation;
 			pointerLocation = array[pointerLocation];
-			if (pointerLocation >= array.size()) array.resize(pointerLocation + 1, 0);
+			if (pointerLocation >= array.size()) { array.resize(pointerLocation + 1, 0); }
 			array[pointerLocation] = tmp;
 		}
 		else if (code[i] == 'J')
 		{
 			pointerLocation = array[pointerLocation];
-			if (pointerLocation >= array.size()) array.resize(pointerLocation + 1, 0);
+			if (pointerLocation >= array.size()) { array.resize(pointerLocation + 1, 0); }
 		}
-        else if (code[i] == 'n') {
-            std::cout << array[pointerLocation];
-        }
-        else if (code[i] == 'g') {
-            std::cout << pointerLocation;
-        }
-        else if (code[i] == 'R') {
-            array[pointerLocation] = rand() % 101;
-        }
-        else if (code[i] == 'c') {
-            array[pointerLocation] += 1;
-        }
-        else if (code[i] == 'C') {
-            array[pointerLocation] += 10;
-        }
-        else if (code[i] == 'o') {
-            if (array[pointerLocation] > 0) {
-                array[pointerLocation] -= 1;
-            }
-        }
-        else if (code[i] == '-')
-        {
-            throw CExitException();
-        }
+		else if (code[i] == 'n') { std::cout << array[pointerLocation]; }
+		else if (code[i] == 'g') { std::cout << pointerLocation; }
+		else if (code[i] == 'R') { array[pointerLocation] = rand() % 101; }
+		else if (code[i] == 'c') { array[pointerLocation] += 1; }
+		else if (code[i] == 'C') { array[pointerLocation] += 10; }
+		else if (code[i] == 'o')
+		{
+			if (array[pointerLocation] > 0) { array[pointerLocation] -= 1; }
+		}
+		else if (code[i] == '-')
+		{
+			system("pause");
+			exit(0);
+		}
 		else if (code[i] == '>') { std::cout << std::endl; }
 		else if (code[i] == 'O')
 		{
@@ -451,12 +434,75 @@ void interpret(std::string code) {
 			i--;
 			if (i < code.length() - 1) { i += 2; }
 		}
+		else if (code[i] == '_') { return; }
+		else if (code[i] == 'x' && i + 4 < code.length() && code[i + 1] == '[' &&
+				 (code[i + 2] == '+' || code[i + 2] == '-') && (code[i + 3] == '0' || code[i + 3] == '1') &&
+				 code[i + 4] == ']')
+		{
+			int target_index = 0;
+			if (code[i + 2] == '+') { target_index = array[pointerLocation + 1]; }
+			else if (code[i + 2] == '-')
+			{
+				if (pointerLocation == 0)
+				{
+					std::cout << "Error! No left cell available." << std::endl;
+					return;
+				}
+				target_index = array[pointerLocation - 1];
+			}
+
+			if (target_index < 0)
+			{
+				std::cout << "Error! Invalid target index." << std::endl;
+				return;
+			}
+
+			if (array.size() <= target_index) { array.resize(target_index + 1, 0); }
+
+			array[target_index] = array[pointerLocation];
+
+			if (code[i + 3] == '1') { pointerLocation = target_index; }
+
+			i += 4;
+		}
+		else if (code[i] == 'm' && i + 4 < code.length() && code[i + 1] == '[' &&
+				 (code[i + 2] == '+' || code[i + 2] == '-') && (code[i + 3] == '0' || code[i + 3] == '1') &&
+				 code[i + 4] == ']')
+		{
+			int target_index = 0;
+			if (code[i + 2] == '+') { target_index = array[pointerLocation + 1]; }
+			else if (code[i + 2] == '-')
+			{
+				if (pointerLocation == 0)
+				{
+					std::cout << "Error! No left cell available." << std::endl;
+					return;
+				}
+				target_index = array[pointerLocation - 1];
+			}
+
+			if (target_index < 0)
+			{
+				std::cout << "Error! Invalid target index." << std::endl;
+				return;
+			}
+
+			if (array.size() <= target_index) { array.resize(target_index + 1, 0); }
+
+			array[target_index] = array[pointerLocation];
+			array[pointerLocation] = 0;
+
+			if (code[i + 3] == '1') { pointerLocation = target_index; }
+
+			i += 4;
+		}
+		else if (code[i] == 'G') { array[pointerLocation] = pointerLocation; }
 		i += 1;
 	}
 	std::cout << " " << std::endl;
 
-    debuggerCurrentCode = "";
-    debuggerCurrentCodePos = 0;
+	debuggerCurrentCode = "";
+	debuggerCurrentCodePos = 0;
 }
 
 void arythm(std::string code)
@@ -504,13 +550,11 @@ void arythm(std::string code)
 			actyes = true;
 		}
 	}
-	if (actyes == true)
-	{
-		if (actions[0] == 0) { array[pointerLocation] = nums[0] - nums[1]; }
-		else if (actions[0] == 1) { array[pointerLocation] = nums[0] + nums[1]; }
-		else if (actions[0] == 2) { array[pointerLocation] = nums[0] * nums[1]; }
-		else if (actions[0] == 3) { array[pointerLocation] = nums[0] / nums[1]; }
-	}
+
+	if (actions[0] == 0) { array[pointerLocation] = nums[0] - nums[1]; }
+	else if (actions[0] == 1) { array[pointerLocation] = nums[0] + nums[1]; }
+	else if (actions[0] == 2) { array[pointerLocation] = nums[0] * nums[1]; }
+	else if (actions[0] == 3) { array[pointerLocation] = nums[0] / nums[1]; }
 	else
 	{
 		std::cout << "ERROR! Action not found!";
@@ -589,13 +633,12 @@ void ifFunc(std::string code)
 	else { std::cout << "Error! If without body!" << std::endl; }
 }
 
-
 void ExceptionHandler(unsigned int, struct _EXCEPTION_POINTERS* ep)
 {
 	std::string reasonStr;
 #define EXCEPTION_NAME(x)                                                                                              \
 	case x:                                                                                                            \
-		reasonStr = #x;                                                                                               \
+		reasonStr = #x;                                                                                                \
 		break
 
 	switch (ep->ExceptionRecord->ExceptionCode)
@@ -627,40 +670,40 @@ void ExceptionHandler(unsigned int, struct _EXCEPTION_POINTERS* ep)
 	}
 #undef EXCEPTION_NAME
 
-    throw std::runtime_error(reasonStr);
+	throw std::runtime_error(reasonStr);
 }
 
-const std::string label =
-	"Welcome to Better Cookie961 language Compiler v3.5 (Debugger version " + std::string(DebuggerVersion) + ")";
+const std::string label = "Welcome to Better Cookie961 language Compiler v3.6 (Debugger version)";
+
 int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view filename)
 {
-    debuggerStep = false;
-    debuggerWait = false;
+	debuggerStep = false;
+	debuggerWait = false;
 
-    array = { 0 };
-    pointerLocation = 0;
+	array = {0};
+	pointerLocation = 0;
 
-    runPtr = run_ptr;
-    
-    _set_se_translator(ExceptionHandler);
+	runPtr = run_ptr;
+
+	_set_se_translator(ExceptionHandler);
 
 	srand(time(NULL));
 
 	std::cout << label << std::endl;
 	std::cout << " " << std::endl;
-		
+
 	if (endsWith(filename, ".bc961"))
-	{ 
-        const std::string foilData = readFile(filename);
-		interpret(foilData); 
-    }
+	{
+		const std::string foilData = readFile(filename);
+		interpret(foilData);
+	}
 	else
 	{
 		std::cout << "Error! Unknown extension.";
 		return 0;
 	}
 
-    return 0;
+	return 0;
 }
 
 int bc961_main_shell(std::atomic_bool* run_ptr)
@@ -684,11 +727,27 @@ int bc961_main_shell(std::atomic_bool* run_ptr)
 	{
 		std::string code;
 		std::cout << "Code: ";
-		std::cin.ignore();
 		std::getline(std::cin, code);
 		interpret(code);
 		nig += 1;
 	}
 
+	return 0;
+}
+
+int main()
+{
+	std::atomic_bool run = true;
+	int mode = 0;
+	std::cout << "Mode(1 - compiler, 2 - interpreter): ";
+	std::cin >> mode;
+	if (mode == 1)
+	{
+		std::string filename;
+		std::cout << "File Name: ";
+		std::cin >> filename;
+		return bc961_main_file(&run, filename);
+	}
+	else { return bc961_main_shell(&run); }
 	return 0;
 }
