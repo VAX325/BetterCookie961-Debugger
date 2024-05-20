@@ -171,8 +171,7 @@ void interpret(std::string code)
 		}
 		else if (code[i] == '-')
 		{
-			system("pause");
-			exit(0);
+			throw CExitException();
 		}
 		else if (code[i] == '>') { std::cout << std::endl; }
 		else if (code[i] == 'O')
@@ -499,7 +498,6 @@ void interpret(std::string code)
 		else if (code[i] == 'G') { array[pointerLocation] = pointerLocation; }
 		i += 1;
 	}
-	std::cout << " " << std::endl;
 
 	debuggerCurrentCode = "";
 	debuggerCurrentCodePos = 0;
@@ -696,6 +694,7 @@ int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view filename)
 	{
 		const std::string foilData = readFile(filename);
 		interpret(foilData);
+		std::cout << " " << std::endl;
 	}
 	else
 	{
@@ -729,25 +728,9 @@ int bc961_main_shell(std::atomic_bool* run_ptr)
 		std::cout << "Code: ";
 		std::getline(std::cin, code);
 		interpret(code);
+		std::cout << " " << std::endl;
 		nig += 1;
 	}
 
-	return 0;
-}
-
-int main()
-{
-	std::atomic_bool run = true;
-	int mode = 0;
-	std::cout << "Mode(1 - compiler, 2 - interpreter): ";
-	std::cin >> mode;
-	if (mode == 1)
-	{
-		std::string filename;
-		std::cout << "File Name: ";
-		std::cin >> filename;
-		return bc961_main_file(&run, filename);
-	}
-	else { return bc961_main_shell(&run); }
 	return 0;
 }
