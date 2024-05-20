@@ -12,6 +12,8 @@
 #include <time.h>
 #include <windows.h>
 
+#include "BCookie961.h"
+
 /*
 
 
