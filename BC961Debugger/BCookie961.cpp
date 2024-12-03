@@ -11,6 +11,7 @@
 #include <ctime>
 #include <time.h>
 #include <windows.h>
+#include <regex>
 
 #include "BCookie961.h"
 
@@ -28,6 +29,8 @@ UPDATE LOG:
 3.5 - Added P and J commands!
 
 3.6 - Added _(break), x/m[+/-0/1], and G
+
+3.7 - Made cross-platform and fixed bugs (comments are now working just fine!)
 
 
 */
@@ -64,6 +67,17 @@ bool endsWith(const std::string_view str, const std::string_view suffix)
 	return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
 }
 
+//Delete Comments from code
+static std::string preprocessCode(const std::string& code)
+{
+	std::string result = code;
+	std::regex singleLineComment("//.*");
+	std::regex multiLineComment("/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/");
+	result = std::regex_replace(result, singleLineComment, "");
+	result = std::regex_replace(result, multiLineComment, "");
+	return result;
+}
+
 std::string readFile(const std::string_view fileName)
 {
 	std::ifstream f(fileName.data());
@@ -86,6 +100,7 @@ void arythm(std::string code);
 
 void interpret(std::string code)
 {
+	//const std::string code = preprocessCode(rawCode);
 	int i = 0;
 	int c = 0;
 	while (i < code.length() && *runPtr)
@@ -673,7 +688,7 @@ void ExceptionHandler(unsigned int, struct _EXCEPTION_POINTERS* ep)
 	throw std::runtime_error(reasonStr);
 }
 
-const std::string label = "Welcome to Better Cookie961 language Compiler v3.6 (Debugger version)";
+const std::string label = "Welcome to Better Cookie961 language Compiler v3.7";
 
 int bc961_main_file(std::atomic_bool* run_ptr, const std::string_view filename)
 {
