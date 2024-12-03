@@ -20,7 +20,7 @@ const int getPointerLocation();
 
 void setBreakpoint(std::string_view::size_type pos, bool enable);
 
-const char DebuggerVersion[8 + 1] = {
+constexpr char DebuggerVersion[8 + 1] = {
 	// First month letter, Oct Nov Dec = '1' otherwise '0'
 	(__DATE__[0] == 'O' || __DATE__[0] == 'N' || __DATE__[0] == 'D') ? '1' : '0',
 
